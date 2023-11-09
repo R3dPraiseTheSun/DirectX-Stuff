@@ -1,0 +1,11 @@
+
+.vs/slnx.sqlite
+*.vsidx
+*.lock
+DirectXTutorials/.vs/DirectXTutorials/v17/.suo
+DirectXTutorials/.vs/DirectXTutorials/v17/.wsuo
+*.db
+*.db-shm
+*.db-wal
+*.opendb
+*.ipch
