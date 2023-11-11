@@ -106,6 +106,30 @@ void Graphics::Update()
     }
 }
 
+// Function to convert HSL to RGB
+void HSLtoRGB(float h, float s, float l, float& r, float& g, float& b) {
+    if (s == 0.0f) {
+        r = g = b = l;
+    }
+    else {
+        auto hue2rgb = [](float p, float q, float t) {
+            if (t < 0.0f) t += 1.0f;
+            if (t > 1.0f) t -= 1.0f;
+            if (t < 1.0f / 6.0f) return p + (q - p) * 6.0f * t;
+            if (t < 1.0f / 2.0f) return q;
+            if (t < 2.0f / 3.0f) return p + (q - p) * (2.0f / 3.0f - t) * 6.0f;
+            return p;
+            };
+
+        auto q = l < 0.5f ? l * (1.0f + s) : l + s - l * s;
+        auto p = 2.0f * l - q;
+
+        r = hue2rgb(p, q, h + 1.0f / 3.0f);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1.0f / 3.0f);
+    }
+}
+
 void Graphics::Render()
 {
     auto commandAllocator = g_CommandAllocators[g_CurrentBackBufferIndex];
@@ -122,7 +146,32 @@ void Graphics::Render()
 
         g_CommandList->ResourceBarrier(1, &barrier);
 
-        FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
+        // Get the current time point
+        auto currentTime = std::chrono::high_resolution_clock::now();
+
+        // Convert the time point to a duration since the epoch
+        auto duration = currentTime.time_since_epoch();
+
+        // Convert the duration to seconds
+        auto seconds = std::chrono::duration_cast<std::chrono::duration<float>>(duration);
+
+        // Extract the count of seconds as a numeric value
+        float currentTimeInSeconds = seconds.count();
+
+        // Adjust the speed of the color transition by multiplying currentTimeInSeconds with a scaling factor
+        float scalingFactor = 205.5f;  // Adjust this value to control the speed of the transition
+
+        // Calculate hue based on time
+        float hue = fmod(static_cast<float>(currentTimeInSeconds * scalingFactor), 360.0f) / 360.0f; // Range [0, 1)
+
+
+        float saturation = 1.0f; // Fully saturated color
+        float lightness = 0.5f; // Middle brightness
+
+        float red, green, blue;
+        HSLtoRGB(hue, saturation, lightness, red, green, blue);
+
+        FLOAT clearColor[] = { red, green, blue, 1.0f };
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
             g_CurrentBackBufferIndex, g_RTVDescriptorSize);
 
