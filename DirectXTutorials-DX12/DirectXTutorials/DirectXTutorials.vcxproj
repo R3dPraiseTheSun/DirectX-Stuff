@@ -89,10 +89,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Graphics.cpp" />
+    <ClCompile Include="Source\GraphicsUtils.cpp" />
+    <ClCompile Include="Source\SubWindow.cpp" />
     <ClCompile Include="Source\WinMain.cpp" />
+    <ClCompile Include="Source\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Graphics.h" />
+    <ClInclude Include="Source\GraphicsUtils.h" />
     <ClInclude Include="Source\Helpers.h" />
+    <ClInclude Include="Source\pch.h" />
+    <ClInclude Include="Source\SubWindow.h" />
+    <ClInclude Include="Source\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
