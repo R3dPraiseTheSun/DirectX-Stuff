@@ -9,3 +9,4 @@ DirectXTutorials/.vs/DirectXTutorials/v17/.wsuo
 *.db-wal
 *.opendb
 *.ipch
+.vs/slnx.sqlite-journal
