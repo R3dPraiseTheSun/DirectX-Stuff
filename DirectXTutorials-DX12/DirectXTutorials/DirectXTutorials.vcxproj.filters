@@ -22,42 +22,93 @@
     <Filter Include="Source\pch">
       <UniqueIdentifier>{b3dcc846-7bb7-4d4f-9083-70bf4675e453}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Shaders">
+      <UniqueIdentifier>{ef94e090-aeeb-4406-8e13-94af9f76bdc3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\WinMain.cpp">
+    <ClInclude Include="Source\header\d3dcompiler.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\header\d3dx12.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\header\d3d12.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Helpers.h">
+      <Filter>Source\Classes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\HighResolutionClock.h">
+      <Filter>Source\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\KeyCodes.h">
+      <Filter>Source\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Tutorial2.h">
+      <Filter>Source\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Window.h">
+      <Filter>Source\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game.h">
+      <Filter>Source\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Events.h">
+      <Filter>Source\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\CommandQueue.h">
+      <Filter>Source\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Application.h">
+      <Filter>Source\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Application.cpp">
+      <Filter>Source\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\CommandQueue.cpp">
+      <Filter>Source\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game.cpp">
+      <Filter>Source\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\HighResolutionClock.cpp">
+      <Filter>Source\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\main.cpp">
+      <Filter>Source\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Tutorial2.cpp">
       <Filter>Source\Private</Filter>
     </ClCompile>
     <ClCompile Include="Source\Window.cpp">
       <Filter>Source\Private</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Graphics.cpp">
-      <Filter>Source\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\GraphicsUtils.cpp">
-      <Filter>Source\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\SubWindow.cpp">
-      <Filter>Source\Private</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Helpers.h">
-      <Filter>Source\Classes</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Window.h">
-      <Filter>Source\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Graphics.h">
-      <Filter>Source\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\pch.h">
-      <Filter>Source\pch</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\GraphicsUtils.h">
-      <Filter>Source\Classes</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\SubWindow.h">
-      <Filter>Source\Public</Filter>
-    </ClInclude>
+    <ResourceCompile Include="DirectX12Learning.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\..\favicon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="icon1.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Source\PixelShader.hlsl">
+      <Filter>Source\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Source\VertexShader.hlsl">
+      <Filter>Source\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
