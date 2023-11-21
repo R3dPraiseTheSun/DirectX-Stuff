@@ -11,6 +11,8 @@ using namespace Microsoft::WRL;
 #include <d3dx12.h>
 #include "./header/d3dcompiler.h"
 
+#include "./header/OBJ_Loader.h"
+
 #include <algorithm> // For std::min and std::max.
 #if defined(min)
 #undef min
@@ -37,26 +39,9 @@ struct VertexPosColor
     XMFLOAT3 Color;
 };
 
-static VertexPosColor g_Vertices[8] = {
-    { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f) }, // 0
-    { XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) }, // 1
-    { XMFLOAT3(1.0f,  1.0f, -1.0f), XMFLOAT3(1.0f, 1.0f, 0.0f) }, // 2
-    { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) }, // 3
-    { XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) }, // 4
-    { XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT3(0.0f, 1.0f, 1.0f) }, // 5
-    { XMFLOAT3(1.0f,  1.0f,  1.0f), XMFLOAT3(1.0f, 1.0f, 1.0f) }, // 6
-    { XMFLOAT3(1.0f, -1.0f,  1.0f), XMFLOAT3(1.0f, 0.0f, 1.0f) }  // 7
-};
+static std::vector<VertexPosColor> g_Vertices;
 
-static WORD g_Indicies[36] =
-{
-    0, 1, 2, 0, 2, 3,
-    4, 6, 5, 4, 7, 6,
-    4, 5, 1, 4, 1, 0,
-    3, 2, 6, 3, 6, 7,
-    1, 5, 6, 1, 6, 2,
-    4, 0, 3, 4, 3, 7
-};
+static std::vector<WORD> g_Indices;
 
 Tutorial2::Tutorial2(const std::wstring& name, int width, int height, bool vSync)
     : super(name, width, height, vSync)
@@ -65,6 +50,56 @@ Tutorial2::Tutorial2(const std::wstring& name, int width, int height, bool vSync
     , m_FoV(45.0)
     , m_ContentLoaded(false)
 {
+    objl::Loader Loader;
+    if (Loader.LoadFile("Glock.obj")) {
+        // Go through each loaded mesh and out its contents
+        for (int i = 0; i < Loader.LoadedMeshes.size(); i++)
+        {
+            objl::Mesh curMesh = Loader.LoadedMeshes[i];
+
+            if (curMesh.MeshName == "Sphere") continue;
+            if (curMesh.MeshName == "Glock_Low_Cube.001") continue;
+            if (curMesh.MeshName == "Glock_DetailedMIrror_Cube.002") continue;
+
+            for (int j = 0; j < curMesh.Vertices.size(); j++)
+            {
+                g_Vertices.push_back(
+                    {
+                        XMFLOAT3(curMesh.Vertices[j].Position.X, curMesh.Vertices[j].Position.Y, curMesh.Vertices[j].Position.Z),
+                        XMFLOAT3(curMesh.MeshMaterial.Kd.X, curMesh.MeshMaterial.Kd.Y, curMesh.MeshMaterial.Kd.Z)
+                    }
+                );
+            }
+            for (int j = 0; j < curMesh.Indices.size(); j += 3)
+            {
+                g_Indices.push_back(curMesh.Indices[j]);
+                g_Indices.push_back(curMesh.Indices[j + 1]);
+                g_Indices.push_back(curMesh.Indices[j + 2]);
+            }
+        }
+    }
+    else {
+        g_Vertices = {
+            { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f) }, // 0
+            { XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) }, // 1
+            { XMFLOAT3(1.0f,  1.0f, -1.0f), XMFLOAT3(1.0f, 1.0f, 0.0f) }, // 2
+            { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) }, // 3
+            { XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) }, // 4
+            { XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT3(0.0f, 1.0f, 1.0f) }, // 5
+            { XMFLOAT3(1.0f,  1.0f,  1.0f), XMFLOAT3(1.0f, 1.0f, 1.0f) }, // 6
+            { XMFLOAT3(1.0f, -1.0f,  1.0f), XMFLOAT3(1.0f, 0.0f, 1.0f) }  // 7
+        };
+
+        g_Indices =
+        {
+            0, 1, 2, 0, 2, 3,
+            4, 6, 5, 4, 7, 6,
+            4, 5, 1, 4, 1, 0,
+            3, 2, 6, 3, 6, 7,
+            1, 5, 6, 1, 6, 2,
+            4, 0, 3, 4, 3, 7
+        };
+    }
 }
 
 void Tutorial2::UpdateBufferResource(
@@ -85,7 +120,7 @@ void Tutorial2::UpdateBufferResource(
         &heapProps0,
         D3D12_HEAP_FLAG_NONE,
         &resourceDesc0,
-        D3D12_RESOURCE_STATE_COPY_DEST,
+        D3D12_RESOURCE_STATE_COMMON,
         nullptr,
         IID_PPV_ARGS(pDestinationResource)));
 
@@ -124,23 +159,23 @@ bool Tutorial2::LoadContent()
     ComPtr<ID3D12Resource> intermediateVertexBuffer;
     UpdateBufferResource(commandList,
         &m_VertexBuffer, &intermediateVertexBuffer,
-        _countof(g_Vertices), sizeof(VertexPosColor), g_Vertices);
+        g_Vertices.size(), sizeof(VertexPosColor), g_Vertices.data());
 
     // Create the vertex buffer view.
     m_VertexBufferView.BufferLocation = m_VertexBuffer->GetGPUVirtualAddress();
-    m_VertexBufferView.SizeInBytes = sizeof(g_Vertices);
+    m_VertexBufferView.SizeInBytes = g_Vertices.size() * sizeof(VertexPosColor);
     m_VertexBufferView.StrideInBytes = sizeof(VertexPosColor);
 
     // Upload index buffer data.
     ComPtr<ID3D12Resource> intermediateIndexBuffer;
     UpdateBufferResource(commandList,
         &m_IndexBuffer, &intermediateIndexBuffer,
-        _countof(g_Indicies), sizeof(WORD), g_Indicies);
+        g_Indices.size(), sizeof(WORD), g_Indices.data());
 
     // Create index buffer view.
     m_IndexBufferView.BufferLocation = m_IndexBuffer->GetGPUVirtualAddress();
     m_IndexBufferView.Format = DXGI_FORMAT_R16_UINT;
-    m_IndexBufferView.SizeInBytes = sizeof(g_Indicies);
+    m_IndexBufferView.SizeInBytes = g_Indices.size() * sizeof(WORD);
 
     // Create the descriptor heap for the depth-stencil view.
     D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
@@ -316,14 +351,29 @@ void Tutorial2::OnUpdate(UpdateEventArgs& e)
         totalTime = 0.0;
     }
 
-    // Update the model matrix.
+    // Initial rotation by 45 degrees around the Y-axis
+    const float initialRotationAngle = 0.0f;
+    const XMVECTOR initialRotationAxisY = XMVectorSet(0, 0, 1, 0);
+    
+    XMMATRIX initialRotationMatrix = XMMatrixRotationAxis(initialRotationAxisY, XMConvertToRadians(initialRotationAngle));
+
+    // Time-dependent rotation around the Y-axis
     float angle = static_cast<float>(e.TotalTime * 90.0);
-    const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
-    m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+    const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
+    XMMATRIX timeDependentRotationMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+
+    // Combine the two rotation matrices
+    m_ModelMatrix = initialRotationMatrix * timeDependentRotationMatrix;
+
+    //XMVECTOR translation = XMMatrixTranslation(m_ModelMatrix);
+    //translation = XMVectorSetW(translation, 0.0f);
 
     // Update the view matrix.
     const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
+
     const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
+    //focusPoint = XMVector3TransformCoord(focusPoint, m_ModelMatrix);
+
     const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
     m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
@@ -397,7 +447,7 @@ void Tutorial2::OnRender(RenderEventArgs& e)
     mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
     commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
-    commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
+    commandList->DrawIndexedInstanced(g_Indices.size(), 1, 0, 0, 0);
 
     // Present
     {
