@@ -2,6 +2,7 @@
 
 #include "Game.h"
 #include "Window.h"
+#include "./header/DirectXTex.h"
 
 #include <DirectXMath.h>
 
@@ -15,7 +16,6 @@ public:
      *  Load content required for the demo.
      */
     virtual bool LoadContent() override;
-
     /**
      *  Unload demo specific content that was loaded in LoadContent.
      */
@@ -58,18 +58,26 @@ private:
 
     // Clear the depth of a depth-stencil view.
     void ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
-        D3D12_CPU_DESCRIPTOR_HANDLE dsv, FLOAT depth = 1.0f );
+        D3D12_CPU_DESCRIPTOR_HANDLE dsv, FLOAT depth = 1.0f);
+
+    // Create Texture
+    void UpdateTextureResource(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+        ID3D12Resource** pDestinationResource, ID3D12Resource** pIntermediateResource,
+        size_t width, size_t height, DXGI_FORMAT format, const void* textureData,
+        D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
 
     // Create a GPU buffer.
     void UpdateBufferResource(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
         ID3D12Resource** pDestinationResource, ID3D12Resource** pIntermediateResource,
         size_t numElements, size_t elementSize, const void* bufferData, 
-        D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE );
+        D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
 
     // Resize the depth buffer to match the size of the client area.
     void ResizeDepthBuffer(int width, int height);
     
     uint64_t m_FenceValues[Window::BufferCount] = {};
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_TextureBuffer;
 
     // Vertex buffer for the cube.
     Microsoft::WRL::ComPtr<ID3D12Resource> m_VertexBuffer;
@@ -99,4 +107,12 @@ private:
     DirectX::XMMATRIX m_ProjectionMatrix;
 
     bool m_ContentLoaded;
+
+    // Textures
+private:
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
+    DirectX::TexMetadata m_Metadata;
+    DirectX::ScratchImage m_ScratchImage;
+
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SRVDescriptorHeap;
 };

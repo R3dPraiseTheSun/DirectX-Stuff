@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <ProjectOutputs>
+    <ProjectOutput>
+      <FullPath>D:\Learning\DirectXStuff\DirectX-Stuff\DirectXTutorials-DX12\Debug\Data\Shaders\Shaders.exe</FullPath>
+    </ProjectOutput>
+  </ProjectOutputs>
+  <ContentFiles>
+    <ContentFile>
+      <FullPath>D:\Learning\DirectXStuff\DirectX-Stuff\DirectXTutorials-DX12\Debug\Data\Shaders\PixelShader.cso</FullPath>
+    </ContentFile>
+    <ContentFile>
+      <FullPath>D:\Learning\DirectXStuff\DirectX-Stuff\DirectXTutorials-DX12\Debug\Data\Shaders\VertexShader.cso</FullPath>
+    </ContentFile>
+  </ContentFiles>
+  <SatelliteDlls />
+  <NonRecipeFileRefs />
+</Project>

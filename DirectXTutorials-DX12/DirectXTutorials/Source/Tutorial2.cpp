@@ -37,6 +37,8 @@ struct VertexPosColor
 {
     XMFLOAT3 Position;
     XMFLOAT3 Color;
+    XMFLOAT3 Normal;
+    XMFLOAT2 TexCoord;
 };
 
 static std::vector<VertexPosColor> g_Vertices;
@@ -51,7 +53,7 @@ Tutorial2::Tutorial2(const std::wstring& name, int width, int height, bool vSync
     , m_ContentLoaded(false)
 {
     objl::Loader Loader;
-    if (Loader.LoadFile("Glock.obj")) {
+    if (Loader.LoadFile("./Data/Models/Glock/Glock.obj")) {
         // Go through each loaded mesh and out its contents
         for (int i = 0; i < Loader.LoadedMeshes.size(); i++)
         {
@@ -66,7 +68,9 @@ Tutorial2::Tutorial2(const std::wstring& name, int width, int height, bool vSync
                 g_Vertices.push_back(
                     {
                         XMFLOAT3(curMesh.Vertices[j].Position.X, curMesh.Vertices[j].Position.Y, curMesh.Vertices[j].Position.Z),
-                        XMFLOAT3(curMesh.MeshMaterial.Kd.X, curMesh.MeshMaterial.Kd.Y, curMesh.MeshMaterial.Kd.Z)
+                        XMFLOAT3(curMesh.MeshMaterial.Kd.X, curMesh.MeshMaterial.Kd.Y, curMesh.MeshMaterial.Kd.Z),
+                        XMFLOAT3(curMesh.Vertices[j].Normal.X, curMesh.Vertices[j].Normal.Y, curMesh.Vertices[j].Normal.Z),
+                        XMFLOAT2(curMesh.Vertices[j].TextureCoordinate.X, curMesh.Vertices[j].TextureCoordinate.Y)
                     }
                 );
             }
@@ -148,12 +152,72 @@ void Tutorial2::UpdateBufferResource(
     }
 }
 
+void Tutorial2::UpdateTextureResource(
+    ComPtr<ID3D12GraphicsCommandList2> commandList,
+    ID3D12Resource** pDestinationResource,
+    ID3D12Resource** pIntermediateResource,
+    size_t width, size_t height, DXGI_FORMAT format, const void* textureData,
+    D3D12_RESOURCE_FLAGS flags)
+{
+    auto device = Application::Get().GetDevice();
+
+    size_t textureSize = width * height * sizeof(format);
+
+    CD3DX12_HEAP_PROPERTIES heapProps0(D3D12_HEAP_TYPE_DEFAULT);
+    CD3DX12_RESOURCE_DESC resourceDesc0 = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, flags);
+
+    // Create a committed resource for the GPU resource in a default heap.
+    ThrowIfFailed(device->CreateCommittedResource(
+        &heapProps0,
+        D3D12_HEAP_FLAG_NONE,
+        &resourceDesc0,
+        D3D12_RESOURCE_STATE_COMMON,
+        nullptr,
+        IID_PPV_ARGS(pDestinationResource)));
+
+    // Create a committed resource for the upload.
+    if (textureData)
+    {
+        CD3DX12_HEAP_PROPERTIES heapProps1(D3D12_HEAP_TYPE_DEFAULT);
+        CD3DX12_RESOURCE_DESC resourceDesc1 = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+
+        ThrowIfFailed(device->CreateCommittedResource(
+            &heapProps1,
+            D3D12_HEAP_FLAG_NONE,
+            &resourceDesc1,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(pIntermediateResource)));
+
+        D3D12_SUBRESOURCE_DATA subresourceData = {};
+        subresourceData.pData = textureData;
+        subresourceData.RowPitch = width * sizeof(format);
+        subresourceData.SlicePitch = subresourceData.RowPitch * height;
+
+        UpdateSubresources(commandList.Get(),
+            *pDestinationResource, *pIntermediateResource,
+            0, 0, 1, &subresourceData);
+    }
+}
+
+
 
 bool Tutorial2::LoadContent()
 {
     auto device = Application::Get().GetDevice();
     auto commandQueue = Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
     auto commandList = commandQueue->GetCommandList();
+
+    ThrowIfFailed(DirectX::LoadFromWICFile(L"./Data/Models/Glock/Textures/TextureGlock.png",
+        DirectX::WIC_FLAGS_NONE, &m_Metadata, m_ScratchImage
+    ));
+    DirectX::CreateTexture(device.Get(), m_Metadata, m_Texture.GetAddressOf());
+
+    // Upload texture resource
+    ComPtr<ID3D12Resource> texture2D;
+    UpdateTextureResource(commandList,
+        &m_TextureBuffer, &texture2D, m_Metadata.width,
+        m_Metadata.height, m_Metadata.format, m_Texture.Get());
 
     // Upload vertex buffer data.
     ComPtr<ID3D12Resource> intermediateVertexBuffer;
@@ -184,13 +248,39 @@ bool Tutorial2::LoadContent()
     dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     ThrowIfFailed(device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap)));
 
+    D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc = {};
+    samplerHeapDesc.NumDescriptors = 1;
+    samplerHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+    samplerHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+    ThrowIfFailed(device->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&m_SRVDescriptorHeap)));
+
+    // Create the sampler
+    D3D12_SAMPLER_DESC samplerDesc = {};
+    samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    samplerDesc.MipLODBias = 0;
+    samplerDesc.MaxAnisotropy = 0;
+    samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+    samplerDesc.BorderColor[0] = 1.0f;
+    samplerDesc.BorderColor[1] = 1.0f;
+    samplerDesc.BorderColor[2] = 1.0f;
+    samplerDesc.BorderColor[3] = 1.0f;
+    samplerDesc.MinLOD = 0;
+    samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+
+    device->CreateSampler(&samplerDesc,
+        m_SRVDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
     // Load the vertex shader.
     ComPtr<ID3DBlob> vertexShaderBlob;
-    ThrowIfFailed(D3DReadFileToBlob(L"VertexShader.cso", &vertexShaderBlob));
+    ThrowIfFailed(D3DReadFileToBlob(L"./Data/Shaders/VertexShader.cso", &vertexShaderBlob));
 
     // Load the pixel shader.
     ComPtr<ID3DBlob> pixelShaderBlob;
-    ThrowIfFailed(D3DReadFileToBlob(L"PixelShader.cso", &pixelShaderBlob));
+    ThrowIfFailed(D3DReadFileToBlob(L"./Data/Shaders/PixelShader.cso", &pixelShaderBlob));
 
     // Create the vertex input layout
     D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
@@ -198,6 +288,7 @@ bool Tutorial2::LoadContent()
         { "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
     };
 
     // Create a root signature.
@@ -213,13 +304,30 @@ bool Tutorial2::LoadContent()
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
         D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
         D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-        D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+        //D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
+        //D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
+
+
+    // Initialize the root parameter for the sampler
+    CD3DX12_DESCRIPTOR_RANGE1 samplerDescriptorRange;
+    samplerDescriptorRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0);
+
+    // Add a descriptor range for the texture
+    CD3DX12_DESCRIPTOR_RANGE1 textureDescriptorRange;
+    textureDescriptorRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+    CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+    ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 
     // A single 32-bit constant root parameter that is used by the vertex shader.
-    CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+    CD3DX12_ROOT_PARAMETER1 rootParameters[4];
     rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+    rootParameters[1].InitAsDescriptorTable(1, &textureDescriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    rootParameters[2].InitAsDescriptorTable(1, &samplerDescriptorRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    rootParameters[3].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
 
+    // Create the root signature description
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
 
@@ -228,6 +336,7 @@ bool Tutorial2::LoadContent()
     ComPtr<ID3DBlob> errorBlob;
     ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDescription,
         featureData.HighestVersion, &rootSignatureBlob, &errorBlob));
+
     // Create the root signature.
     ThrowIfFailed(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
         rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
@@ -367,15 +476,9 @@ void Tutorial2::OnUpdate(UpdateEventArgs& e)
     // Combine the two rotation matrices
     m_ModelMatrix = initialRotationMatrix * timeDependentRotationMatrix;
 
-    //XMVECTOR translation = XMMatrixTranslation(m_ModelMatrix);
-    //translation = XMVectorSetW(translation, 0.0f);
-
     // Update the view matrix.
     const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
-
     const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
-    //focusPoint = XMVector3TransformCoord(focusPoint, m_ModelMatrix);
-
     const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
     m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 

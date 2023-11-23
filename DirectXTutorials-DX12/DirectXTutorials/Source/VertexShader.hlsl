@@ -15,6 +15,7 @@ struct VertexPosColor
     float3 Color    : COLOR;
     float3 Normal   : NORMAL;
     float3 LightDir : TEXCOORD0;
+    float2 TexCoord : TEXCOORD1;
 };
 
 struct VertexShaderOutput
@@ -22,6 +23,9 @@ struct VertexShaderOutput
 	float4 Color    : COLOR;
     float3 Normal   : NORMAL;
     float3 LightDir : TEXCOORD0;
+    float2 TexCoord : TEXCOORD1;
+    
+    // Always last so it doesnt interfere with the order!!
     float4 Position : SV_Position;
 };
 
@@ -41,9 +45,10 @@ VertexShaderOutput main(VertexPosColor IN)
     OUT.Normal = normalize(mul(IN.Position, normalMatrix));
     
     // Calculate light direction in world space
-    OUT.LightDir = normalize(float3(1.0f, 1.0f, -1.0f)); // Example light direction
+    OUT.LightDir = normalize(float3(1.0f, 1.0f, -1.0f));
     
     OUT.Color = float4(IN.Color, 1.0f);
+    OUT.TexCoord = IN.TexCoord;
 
     return OUT;
 }

@@ -22,9 +22,6 @@
     <Filter Include="Source\pch">
       <UniqueIdentifier>{b3dcc846-7bb7-4d4f-9083-70bf4675e453}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Shaders">
-      <UniqueIdentifier>{ef94e090-aeeb-4406-8e13-94af9f76bdc3}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\header\d3dcompiler.h">
@@ -66,6 +63,9 @@
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\header\DirectXTex.h">
+      <Filter>Source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Application.cpp">
@@ -104,11 +104,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Source\PixelShader.hlsl">
-      <Filter>Source\Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Source\VertexShader.hlsl">
-      <Filter>Source\Shaders</Filter>
-    </FxCompile>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
